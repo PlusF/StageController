@@ -25,12 +25,20 @@ class MovableObject:
         self.disp = 0
 
     def get_rank(self):
+        """
+        :rtype: int
+        :return: rank
+        """
         for i, thres in enumerate(self.thres_list):
             if self.disp < thres:
                 self.rank = len(self.thres_list) - i - 1
         return self.rank
 
     def get_direction(self):
+        """
+        :rtype: list
+        :return: list of direction [x, y, z]
+        """
         return self.direction
 
 

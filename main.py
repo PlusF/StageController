@@ -61,7 +61,6 @@ class Application(tk.Frame):
 
         self.rank_xy_pre = 0
         self.rank_z_pre = 0
-
         self.direction_xy_pre = [0, 0, 0]
         self.direction_z_pre = [0, 0, 0]
 
@@ -100,10 +99,18 @@ class Application(tk.Frame):
         # ウィジェット xy_buttons
         self.vel_xy = tk.IntVar(value=100)
         self.combobox_xy = ttk.Combobox(self.frame_xy_buttons, values=VEL_LIST_XY[1:], textvariable=self.vel_xy, justify='center', width=WIDTH_BUTTON)
-        self.button_top = ttk.Button(self.frame_xy_buttons, width=WIDTH_BUTTON, text='↑', command=self.move_top)
-        self.button_left = ttk.Button(self.frame_xy_buttons, width=WIDTH_BUTTON, text='←', command=self.move_left)
-        self.button_right = ttk.Button(self.frame_xy_buttons, width=WIDTH_BUTTON, text='→', command=self.move_right)
-        self.button_bottom = ttk.Button(self.frame_xy_buttons, width=WIDTH_BUTTON, text='↓', command=self.move_bottom)
+        self.button_top = ttk.Button(self.frame_xy_buttons, width=WIDTH_BUTTON, text='↑')
+        self.button_left = ttk.Button(self.frame_xy_buttons, width=WIDTH_BUTTON, text='←')
+        self.button_right = ttk.Button(self.frame_xy_buttons, width=WIDTH_BUTTON, text='→')
+        self.button_bottom = ttk.Button(self.frame_xy_buttons, width=WIDTH_BUTTON, text='↓')
+        self.button_top.bind('<Button-1>', self.move_top)
+        self.button_top.bind('<ButtonRelease-1>', self.stop_xy)
+        self.button_left.bind('<Button-1>', self.move_left)
+        self.button_left.bind('<ButtonRelease-1>', self.stop_xy)
+        self.button_right.bind('<Button-1>', self.move_right)
+        self.button_right.bind('<ButtonRelease-1>', self.stop_xy)
+        self.button_bottom.bind('<Button-1>', self.move_bottom)
+        self.button_bottom.bind('<ButtonRelease-1>', self.stop_xy)
         self.button_top.grid(row=0, column=1)
         self.button_left.grid(row=1, column=0)
         self.combobox_xy.grid(row=1, column=1)
@@ -135,8 +142,12 @@ class Application(tk.Frame):
         # ウィジェット z_buttons
         self.vel_z = tk.IntVar(value=100)
         self.combobox_z = ttk.Combobox(self.frame_z_buttons, values=VEL_LIST_Z[1:], textvariable=self.vel_z, justify='center', width=WIDTH_BUTTON)
-        self.button_up = ttk.Button(self.frame_z_buttons, width=WIDTH_BUTTON, text='UP', command=self.move_up)
-        self.button_down = ttk.Button(self.frame_z_buttons, width=WIDTH_BUTTON, text='DOWN', command=self.move_down)
+        self.button_up = ttk.Button(self.frame_z_buttons, width=WIDTH_BUTTON, text='UP')
+        self.button_down = ttk.Button(self.frame_z_buttons, width=WIDTH_BUTTON, text='DOWN')
+        self.button_up.bind('<Button-1>', self.move_up)
+        self.button_up.bind('<ButtonRelease-1>', self.stop_z)
+        self.button_down.bind('<Button-1>', self.move_down)
+        self.button_down.bind('<ButtonRelease-1>', self.stop_z)
         self.button_up.grid(row=0, column=0)
         self.combobox_z.grid(row=1, column=0)
         self.button_down.grid(row=2, column=0)
@@ -149,16 +160,12 @@ class Application(tk.Frame):
 
         self.button_stop = ttk.Button(self.master, text='STOP', command=self.stop_all, style='stop.TButton')
         self.button_stop.grid(row=2, columnspan=2)
-        self.msg = tk.StringVar(value='Ready')
-        self.label_msg = ttk.Label(self.master, textvariable=self.msg)
-        self.label_msg.grid(columnspan=2)
 
     def update(self):
-        self.msg.set(f'oval:\t{self.oval_xy.get_rank()} {self.oval_xy.get_direction()}\n'
-                     f'rect:\t{self.rect_z.get_rank()} {self.rect_z.get_direction()}')
         self.check_and_move()
         self.check_and_stop()
         self.update_position()
+        # previous変数を更新
         self.rank_xy_pre = self.oval_xy.get_rank()
         self.rank_z_pre = self.rect_z.get_rank()
         self.direction_xy_pre = copy.copy(self.oval_xy.get_direction())
@@ -191,7 +198,7 @@ class Application(tk.Frame):
         if self.rank_z_pre != 0 and self.rect_z.get_rank() == 0:
             self.stop_z()
 
-    def move_up(self):
+    def move_up(self, event=None):
         # rank==0→ボタンから呼ばれた
         if self.rect_z.get_rank() > 0:
             vel = VEL_LIST_Z[self.rect_z.get_rank()]
@@ -204,7 +211,7 @@ class Application(tk.Frame):
         else:
             self.device_z.move_velocity(vel, unit=self.unit_vel)
 
-    def move_down(self):
+    def move_down(self, event=None):
         # rank==0→ボタンから呼ばれた
         if self.rect_z.get_rank() > 0:
             vel = -VEL_LIST_Z[self.rect_z.get_rank()]
@@ -218,7 +225,7 @@ class Application(tk.Frame):
         else:
             self.device_z.move_velocity(vel, unit=self.unit_vel)
 
-    def move_right(self):
+    def move_right(self, event=None):
         # rank==0→ボタンから呼ばれた
         if self.oval_xy.get_rank() > 0:
             vel = VEL_LIST_XY[self.oval_xy.get_rank()]
@@ -232,7 +239,7 @@ class Application(tk.Frame):
         else:
             self.device_xy.move_velocity('x', vel)
 
-    def move_left(self):
+    def move_left(self, event=None):
         # rank==0→ボタンから呼ばれた
         if self.oval_xy.get_rank() > 0:
             vel = -VEL_LIST_XY[self.oval_xy.get_rank()]
@@ -246,7 +253,7 @@ class Application(tk.Frame):
         else:
             self.device_xy.move_velocity('x', vel)
 
-    def move_top(self):
+    def move_top(self, event=None):
         # rank==0→ボタンから呼ばれた
         if self.oval_xy.get_rank() > 0:
             vel = VEL_LIST_XY[self.oval_xy.get_rank()]
@@ -260,7 +267,7 @@ class Application(tk.Frame):
         else:
             self.device_xy.move_velocity('y', vel)
 
-    def move_bottom(self):
+    def move_bottom(self, event=None):
         # rank==0→ボタンから呼ばれた
         if self.oval_xy.get_rank() > 0:
             vel = -VEL_LIST_XY[self.oval_xy.get_rank()]
@@ -274,13 +281,15 @@ class Application(tk.Frame):
         else:
             self.device_xy.move_velocity('y', vel)
 
-    def stop_xy(self):
+    def stop_xy(self, event=None):
+        # xy方向に停止命令を出す
         if self.device_xy is None:
             print('stop xy')
         else:
             self.device_xy.stop()
 
-    def stop_z(self):
+    def stop_z(self, event=None):
+        # z方向に停止命令を出す
         if self.device_z is None:
             print('stop z')
         else:
@@ -291,6 +300,8 @@ class Application(tk.Frame):
         self.stop_z()
 
     def update_position(self):
+        # 現在位置を更新
+        # DEBUGモードは何もしない
         if self.device_xy is None or self.device_z is None:
             return
         x, y = self.device_xy.get_position()
@@ -308,6 +319,8 @@ def main():
     elif cl.mode == 'RELEASE':
         main_release(cl)
 
+
+# 動作確認用。デバイスは指定しない。
 def main_debug(cl):
     root = tk.Tk()
     # こうしないとコンボボックスのフォントが変わらない
@@ -320,6 +333,8 @@ def main_debug(cl):
     app = Application(master=root, device_z=None, cl=cl)
     app.mainloop()
 
+
+# 実働用
 def main_release(cl):
     with MySerial(cl.port_xy, cl.baudrate_xy) as ser:
         device_xy = DS102Controller(ser)
