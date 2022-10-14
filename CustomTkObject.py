@@ -12,16 +12,26 @@ class MovableObject:
         self.x0 = None
         self.y0 = None
         self.rank = None
+        self.direction = None
+        self.disp = None
 
     def dragging(self, event):
         pass
 
-    def reset(self, event):
+    def reset(self, event=None):
         self.canvas.moveto(self.id, self.x0, self.y0)
         self.rank = 0
+        self.direction = [0, 0, 0]  # (x, y, z)
+        self.disp = 0
 
     def get_rank(self):
+        for i, thres in enumerate(self.thres_list):
+            if self.disp < thres:
+                self.rank = len(self.thres_list) - i - 1
         return self.rank
+
+    def get_direction(self):
+        return self.direction
 
 
 class MovableOval(MovableObject):
@@ -34,26 +44,36 @@ class MovableOval(MovableObject):
         self.r = (x1 - x0) / 2
         self.x0 = (x0 + x1) / 2 - self.r
         self.y0 = (y0 + y1) / 2 - self.r
-        self.rank = 0
+        self.reset()
 
     def dragging(self, event):
         x = event.x - self.r
         y = event.y - self.r
-        r = ((x - self.x0) ** 2 + (y - self.y0) ** 2) ** 0.5
-        if r > self.thres_list[-1]:
-            theta = math.atan2(y - self.y0, x - self.x0)
-            x = self.thres_list[-1] * math.cos(theta) + self.x0
-            y = self.thres_list[-1] * math.sin(theta) + self.y0
+        dx = x - self.x0
+        dy = y - self.y0
+        r = (dx ** 2 + dy ** 2) ** 0.5
+        theta = math.atan2(dy, dx)
+        if r > self.thres_list[0]:
+            x = self.thres_list[0] * math.cos(theta) + self.x0
+            y = self.thres_list[0] * math.sin(theta) + self.y0
         self.canvas.moveto(self.id, x, y)
 
-        if r < self.thres_list[0]:
-            self.rank = 0
-        elif r < self.thres_list[1]:
-            self.rank = 1
-        elif r < self.thres_list[2]:
-            self.rank = 2
+        # get_rank用
+        self.disp = r
+
+        # directionの確認
+        if math.pi * -0.75 < theta < math.pi * -0.25:
+            self.direction[0] = 0
+            self.direction[1] = 1
+        elif math.pi * -0.25 < theta < math.pi * 0.25:
+            self.direction[0] = 1
+            self.direction[1] = 0
+        elif math.pi * 0.25 < theta < math.pi * 0.75:
+            self.direction[0] = 0
+            self.direction[1] = -1
         else:
-            self.rank = 3
+            self.direction[0] = -1
+            self.direction[1] = 0
 
 
 class MovableRect(MovableObject):
@@ -66,22 +86,22 @@ class MovableRect(MovableObject):
         self.h_half = (y1 - y0) / 2
         self.x0 = x0
         self.y0 = y0
-        self.rank = 0
+        self.reset()
 
     def dragging(self, event):
         y = event.y - self.h_half
         dy = y - self.y0
-        if dy < -self.thres_list[-1]:
-            y  = -self.thres_list[-1] + self.y0
-        elif dy > self.thres_list[-1]:
-            y  = self.thres_list[-1] + self.y0
+        if dy < -self.thres_list[0]:
+            y  = -self.thres_list[0] + self.y0
+        elif dy > self.thres_list[0]:
+            y  = self.thres_list[0] + self.y0
         self.canvas.moveto(self.id, self.x0, y)
 
-        if abs(dy) < self.thres_list[0]:
-            self.rank = 0
-        elif abs(dy) < self.thres_list[1]:
-            self.rank = 1
-        elif abs(dy) < self.thres_list[2]:
-            self.rank = 2
-        else:
-            self.rank = 3
+        # get_rank用
+        self.disp = abs(dy)
+
+        # directionの確認
+        if dy < 0:
+            self.direction[2] = 1
+        elif dy > 0:
+            self.direction[2] = -1
