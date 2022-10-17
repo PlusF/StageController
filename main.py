@@ -13,6 +13,7 @@ from DS102Controller import MySerial, DS102Controller
 from CustomTkObject import MovableOval, MovableRect
 from ConfigLoader import ConfigLoader
 
+
 # ライブラリをオフラインで使えるようにする
 Library.enable_device_db_store()
 # ログを取る
@@ -67,6 +68,8 @@ class Application(tk.Frame):
         self.rank_z_pre = 0
         self.direction_xy_pre = [0, 0, 0]
         self.direction_z_pre = [0, 0, 0]
+
+        self.create_thread()
 
         self.update()
 
@@ -162,8 +165,25 @@ class Application(tk.Frame):
         self.label_z.grid(row=0, column=0)
         self.label_z_cur.grid(row=0, column=1)
 
-        self.button_stop = ttk.Button(self.master, text='STOP', command=self.stop_all, style='stop.TButton')
+        self.button_stop = ttk.Button(self.master, text='STOP ALL STAGES', command=self.stop_all, style='stop.TButton')
         self.button_stop.grid(row=2, columnspan=2)
+
+        self.button_quit = ttk.Button(self.master, text='QUIT', command=self.quit, style='stop.TButton')
+        self.button_quit.grid(row=3, columnspan=2)
+        self.label_quit = ttk.Label(self.master, text='必ずQUITボタンからプログラムを終了してください\nサンプルを外してから終了してください。')
+        self.label_quit.grid(row=4, columnspan=2)
+
+    def create_thread(self):
+        # update_positionの受信待ちで画面がフリーズしないようthreadを立てる
+        self.thread = threading.Thread(target=self.update_position)
+        self.thread.daemon = True
+        self.thread.start()
+
+    def quit(self):
+        # mainloop内でthreadを作っているので、mainloop内でjoinさせないとバグる
+        self.quit_flag = True
+        self.thread.join()
+        self.master.destroy()
 
     def update(self):
         # 動く or 止まる
@@ -337,30 +357,22 @@ def main():
         connection = Connection.open_serial_port(cl.port_z)
         device_z = connection.detect_devices()[0]
     elif cl.mode == 'DEBUG':
-        device_xy = None
-        device_z = None
+        ser = device_xy = connection = device_z = None
+    else:
+        raise ValueError('Wrong format in config.json. Mode must be DEBUG or RELEASE.')
 
     root = tk.Tk()
     root.option_add("*font", FONT)  # こうしないとコンボボックスのフォントが変わらない
+    root.protocol('WM_DELETE_WINDOW', (lambda: 'pass')())  # QUITボタン以外の終了操作を許可しない
     app = Application(master=root, device_xy=device_xy, device_z=device_z, cl=cl)
-
-    # ウィンドウを閉じる際のイベント
-    def on_closing():
-        if messagebox.askokcancel('警告', '自動で定位置へと移動します。よろしいですか？'):
-            app.quit_flag = True
-            t1.join()
-            root.destroy()
-    root.protocol("WM_DELETE_WINDOW", on_closing)
-
-    t1 = threading.Thread(target=app.update_position)
-    t1.daemon = True
-    t1.start()
     app.mainloop()
 
+    # 定位置に戻る & openしているポートをcloseする。
     if cl.mode == 'RELEASE':
         device_z.move_absolute(9000, unit=Units.LENGTH_MICROMETRES)
         ser.close()
         connection.close()
+
     print('Successfully finished the controller program.')
 
 

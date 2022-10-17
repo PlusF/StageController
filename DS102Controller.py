@@ -53,11 +53,12 @@ class DS102Controller:
         :type ser: MySerial
         """
         self.ser = ser
-        # 送受信とステータスの確認
-        self.ser.send('AXIs1:READY?')
-        print(f'X axis: {"READY" if self.ser.recv() == "1" else "NOT READY"}')
-        self.ser.send('AXIs2:READY?')
-        print(f'Y axis: {"READY" if self.ser.recv() == "1" else "NOT READY"}')
+        # 送受信とスピードテーブルの確認
+        for axis in ['x', 'y']:
+            self.ser.send(axis2msg(axis) +'READY?')
+            print(f'{axis} axis: {"READY" if self.ser.recv() == "1" else "NOT READY"}')
+            if not self.speed_table_is(axis, 0):
+                self.select_speed_table(axis, 0)
 
     def set_velocity(self, axis: str, vel: int):
         """
@@ -71,7 +72,7 @@ class DS102Controller:
         msg = axis2msg(axis) + f'Fspeed0 {vel}'
         self.ser.send(msg)
 
-    def select_speed(self, axis: str, speed: int):
+    def select_speed_table(self, axis: str, speed: int):
         """
         select set of speed from 0~9
         :param axis: 'x' or 'y'
@@ -83,7 +84,7 @@ class DS102Controller:
         msg = axis2msg(axis) + f'SELectSPeed {speed}'
         self.ser.send(msg)
 
-    def speed_is(self, axis: str, speed: int) -> bool:
+    def speed_table_is(self, axis: str, speed: int) -> bool:
         """
         check the selected speed
         :param axis: 'x' or 'y'
@@ -112,8 +113,6 @@ class DS102Controller:
         :return:
         """
         self.set_velocity(axis, abs(vel))
-        if not self.speed_is(axis, 0):
-            self.select_speed(axis, 0)
 
         msg = axis2msg(axis) + 'GO '
         if vel > 0:
@@ -150,21 +149,15 @@ class DS102Controller:
         :rtype (int, int)
         :return: x position, y position
         """
-        msg = axis2msg('x') + 'POSition?'
-        self.ser.send(msg)
-        pos_x = int(float(self.ser.recv()) * 1000)
-        msg = axis2msg('y') + 'POSition?'
-        self.ser.send(msg)
-        pos_y = int(float(self.ser.recv()) * 1000)
-        return pos_x, pos_y
-
-    def get_position_request(self):
-        """
-        send a request to get x and y position
-        :rtype (int, int)
-        :return:
-        """
-        msg = axis2msg('x') + 'POSition?'
-        self.ser.send(msg)
-        msg = axis2msg('y') + 'POSition?'
-        self.ser.send(msg)
+        # シリアル通信のエラーで稀に正しい返答が得られないことがある。プログラムが止まらないよう0を入れるようにする。
+        pos = []
+        for axis in ['x', 'y']:
+            msg = axis2msg(axis) + 'POSition?'
+            self.ser.send(msg)
+            pos_axis = self.ser.recv()
+            try:
+                pos_axis = int(float(pos_axis) * 1000)
+            except ValueError:
+                pos_axis = 0
+            pos.append(pos_axis)
+        return pos
