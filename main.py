@@ -1,5 +1,7 @@
 import os
+import time
 import copy
+import threading
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
@@ -36,7 +38,7 @@ def get_color_by_float(value: float):
 
 
 class Application(tk.Frame):
-    def __init__(self, master=None, device_xy: DS102Controller=None, device_z=None, cl: ConfigLoader =None):
+    def __init__(self, master=None, device_xy: DS102Controller = None, device_z=None, cl: ConfigLoader = None):
         super().__init__(master)
         self.master.title('Z Stage Controller')
         self.device_xy = device_xy
@@ -47,7 +49,7 @@ class Application(tk.Frame):
         if os.name == 'nt':
             self.style.theme_use('winnative')  # windowsにしかないテーマ
         self.style.configure('.', font=FONT)
-        self.style.configure("stop.TButton", background='red', foreground='white')
+        self.style.configure("stop.TButton", activeforeground='red', foreground='red')
 
         self.create_widgets()
 
@@ -55,6 +57,8 @@ class Application(tk.Frame):
             self.dt = cl.dt
         else:
             self.dt = DT
+
+        self.quit_flag = False
 
         self.unit_pos = Units.LENGTH_MICROMETRES
         self.unit_vel = Units.VELOCITY_MICROMETRES_PER_SECOND
@@ -86,7 +90,7 @@ class Application(tk.Frame):
         self.frame_z_buttons.grid(row=1, column=0)
         self.frame_z_position.grid(row=2, column=0)
         # ウィジェット xy_canvas
-        self.canvas_xy = tk.Canvas(self.frame_xy_canvas, width=SIZE_CANVAS, height=SIZE_CANVAS)
+        self.canvas_xy = tk.Canvas(self.frame_xy_canvas, width=SIZE_CANVAS*0.9, height=SIZE_CANVAS)
         center = SIZE_CANVAS/2
         r_list = [SIZE_CONT*9, SIZE_CONT*7, SIZE_CONT*5, SIZE_CONT*3, SIZE_CONT*1]
         for i, r in enumerate(r_list):
@@ -140,7 +144,7 @@ class Application(tk.Frame):
         self.rect_z = MovableRect(xmin, SIZE_CANVAS/2-SIZE_CONT, xmax, SIZE_CANVAS/2+SIZE_CONT, fill='lightblue')
         self.canvas_z.pack()
         # ウィジェット z_buttons
-        self.vel_z = tk.IntVar(value=100)
+        self.vel_z = tk.DoubleVar(value=100)
         self.combobox_z = ttk.Combobox(self.frame_z_buttons, values=VEL_LIST_Z[1:], textvariable=self.vel_z, justify='center', width=WIDTH_BUTTON)
         self.button_up = ttk.Button(self.frame_z_buttons, width=WIDTH_BUTTON, text='UP')
         self.button_down = ttk.Button(self.frame_z_buttons, width=WIDTH_BUTTON, text='DOWN')
@@ -162,14 +166,15 @@ class Application(tk.Frame):
         self.button_stop.grid(row=2, columnspan=2)
 
     def update(self):
+        # 動く or 止まる
         self.check_and_move()
         self.check_and_stop()
-        self.update_position()
         # previous変数を更新
         self.rank_xy_pre = self.oval_xy.get_rank()
         self.rank_z_pre = self.rect_z.get_rank()
         self.direction_xy_pre = copy.copy(self.oval_xy.get_direction())
         self.direction_z_pre = copy.copy(self.rect_z.get_direction())
+
         self.master.after(self.dt, self.update)
 
     def check_and_move(self):
@@ -199,26 +204,29 @@ class Application(tk.Frame):
             self.stop_z()
 
     def move_up(self, event=None):
-        # rank==0→ボタンから呼ばれた
-        if self.rect_z.get_rank() > 0:
+        # event is None: 図形操作から呼ばれた
+        if event is None:
             vel = VEL_LIST_Z[self.rect_z.get_rank()]
-            print('move up by upper')
         else:
             vel = self.vel_z.get()
-            print('move up by downer')
+
+        if vel == 0:
+            return
+
         if self.device_z is None:
             print(f'move up by {vel} \u03bcm/s')
         else:
             self.device_z.move_velocity(vel, unit=self.unit_vel)
 
     def move_down(self, event=None):
-        # rank==0→ボタンから呼ばれた
-        if self.rect_z.get_rank() > 0:
+        # event is None: 図形操作から呼ばれた
+        if event is None:
             vel = -VEL_LIST_Z[self.rect_z.get_rank()]
-            print('move down by upper')
         else:
             vel = -self.vel_z.get()
-            print('move down by downer')
+
+        if vel == 0:
+            return
 
         if self.device_z is None:
             print(f'move down by {vel} \u03bcm/s')
@@ -226,13 +234,14 @@ class Application(tk.Frame):
             self.device_z.move_velocity(vel, unit=self.unit_vel)
 
     def move_right(self, event=None):
-        # rank==0→ボタンから呼ばれた
-        if self.oval_xy.get_rank() > 0:
+        # event is None: 図形操作から呼ばれた
+        if event is None:
             vel = VEL_LIST_XY[self.oval_xy.get_rank()]
-            print('move right by upper')
         else:
             vel = self.vel_xy.get()
-            print('move right by downer')
+
+        if vel == 0:
+            return
 
         if self.device_xy is None:
             print(f'move right by {vel} \u03bcm/s')
@@ -240,13 +249,14 @@ class Application(tk.Frame):
             self.device_xy.move_velocity('x', vel)
 
     def move_left(self, event=None):
-        # rank==0→ボタンから呼ばれた
-        if self.oval_xy.get_rank() > 0:
+        # event is None: 図形操作から呼ばれた
+        if event is None:
             vel = -VEL_LIST_XY[self.oval_xy.get_rank()]
-            print('move left by upper')
         else:
             vel = -self.vel_xy.get()
-            print('move left by downer')
+
+        if vel == 0:
+            return
 
         if self.device_xy is None:
             print(f'move left by {vel} \u03bcm/s')
@@ -254,13 +264,14 @@ class Application(tk.Frame):
             self.device_xy.move_velocity('x', vel)
 
     def move_top(self, event=None):
-        # rank==0→ボタンから呼ばれた
-        if self.oval_xy.get_rank() > 0:
+        # event is None: 図形操作から呼ばれた
+        if event is None:
             vel = VEL_LIST_XY[self.oval_xy.get_rank()]
-            print('move top by upper')
         else:
             vel = self.vel_xy.get()
-            print('move top by downer')
+
+        if vel == 0:
+            return
 
         if self.device_xy is None:
             print(f'move top by {vel} \u03bcm/s')
@@ -268,13 +279,14 @@ class Application(tk.Frame):
             self.device_xy.move_velocity('y', vel)
 
     def move_bottom(self, event=None):
-        # rank==0→ボタンから呼ばれた
-        if self.oval_xy.get_rank() > 0:
+        # event is None: 図形操作から呼ばれた
+        if event is None:
             vel = -VEL_LIST_XY[self.oval_xy.get_rank()]
-            print('move bottom by upper')
         else:
             vel = -self.vel_xy.get()
-            print('move bottom by downer')
+
+        if vel == 0:
+            return
 
         if self.device_xy is None:
             print(f'move bottom by {vel} \u03bcm/s')
@@ -301,61 +313,56 @@ class Application(tk.Frame):
 
     def update_position(self):
         # 現在位置を更新
-        # DEBUGモードは何もしない
-        if self.device_xy is None or self.device_z is None:
-            return
-        x, y = self.device_xy.get_position()
-        z = MAX_Z - self.device_z.get_position(unit=self.unit_pos)
-        self.x_cur.set(x)
-        self.y_cur.set(y)
-        self.z_cur.set(z)
+        # シリアル通信で受信する必要があるため，mainloopとは別threadで処理する．
+        while not self.quit_flag:
+            if self.device_xy is None or self.device_z is None:
+                self.x_cur.set(self.x_cur.get() + 1)
+                self.y_cur.set(self.y_cur.get() + 1)
+                self.z_cur.set(self.z_cur.get() + 1)
+            else:
+                x, y = self.device_xy.get_position()
+                z = MAX_Z - self.device_z.get_position(unit=self.unit_pos)
+                self.x_cur.set(round(x, 0))
+                self.y_cur.set(round(y, 0))
+                self.z_cur.set(round(z, 3))
+            time.sleep(self.dt * 0.001)
 
 
 def main():
     cl = ConfigLoader('./config.json')
 
-    if cl.mode == 'DEBUG':
-        main_debug(cl)
-    elif cl.mode == 'RELEASE':
-        main_release(cl)
+    if cl.mode == 'RELEASE':
+        ser = MySerial(cl.port_xy, cl.baudrate_xy)
+        device_xy = DS102Controller(ser)
+        connection = Connection.open_serial_port(cl.port_z)
+        device_z = connection.detect_devices()[0]
+    elif cl.mode == 'DEBUG':
+        device_xy = None
+        device_z = None
 
-
-# 動作確認用。デバイスは指定しない。
-def main_debug(cl):
     root = tk.Tk()
-    # こうしないとコンボボックスのフォントが変わらない
-    root.option_add("*font", FONT)
+    root.option_add("*font", FONT)  # こうしないとコンボボックスのフォントが変わらない
+    app = Application(master=root, device_xy=device_xy, device_z=device_z, cl=cl)
+
     # ウィンドウを閉じる際のイベント
     def on_closing():
-        root.destroy()
+        if messagebox.askokcancel('警告', '自動で定位置へと移動します。よろしいですか？'):
+            app.quit_flag = True
+            t1.join()
+            root.destroy()
     root.protocol("WM_DELETE_WINDOW", on_closing)
 
-    app = Application(master=root, device_z=None, cl=cl)
+    t1 = threading.Thread(target=app.update_position)
+    t1.daemon = True
+    t1.start()
     app.mainloop()
 
-
-# 実働用
-def main_release(cl):
-    with MySerial(cl.port_xy, cl.baudrate_xy) as ser:
-        device_xy = DS102Controller(ser)
-        with Connection.open_serial_port(cl.port_z) as connection:
-            device_list = connection.detect_devices()
-            device_z = device_list[0]
-
-            root = tk.Tk()
-            # こうしないとコンボボックスのフォントが変わらない
-            root.option_add("*font", FONT)
-            # ウィンドウを閉じる際のイベント
-            def on_closing():
-                if messagebox.askokcancel('警告', '自動で定位置へと移動します。よろしいですか？'):
-                    root.destroy()
-            root.protocol("WM_DELETE_WINDOW", on_closing)
-            app = Application(master=root, device_xy=device_xy, device_z=device_z, cl=cl)
-            app.mainloop()
-
+    if cl.mode == 'RELEASE':
         device_z.move_absolute(9000, unit=Units.LENGTH_MICROMETRES)
-
+        ser.close()
+        connection.close()
     print('Successfully finished the controller program.')
+
 
 if __name__ == '__main__':
     main()

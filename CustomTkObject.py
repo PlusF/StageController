@@ -30,7 +30,7 @@ class MovableObject:
         :return: rank
         """
         for i, thres in enumerate(self.thres_list):
-            if self.disp < thres:
+            if self.disp <= thres:
                 self.rank = len(self.thres_list) - i - 1
         return self.rank
 
@@ -62,8 +62,8 @@ class MovableOval(MovableObject):
         r = (dx ** 2 + dy ** 2) ** 0.5
         theta = math.atan2(dy, dx)
         if r > self.thres_list[0]:
-            x = self.thres_list[0] * math.cos(theta) + self.x0
-            y = self.thres_list[0] * math.sin(theta) + self.y0
+            x = (self.thres_list[0] * math.cos(theta) + self.x0) * 0.99
+            y = (self.thres_list[0] * math.sin(theta) + self.y0) * 0.99
         self.canvas.moveto(self.id, x, y)
 
         # get_rank用
@@ -100,9 +100,9 @@ class MovableRect(MovableObject):
         y = event.y - self.h_half
         dy = y - self.y0
         if dy < -self.thres_list[0]:
-            y  = -self.thres_list[0] + self.y0
+            y = -self.thres_list[0] + 1 + self.y0
         elif dy > self.thres_list[0]:
-            y  = self.thres_list[0] + self.y0
+            y = self.thres_list[0] - 1 + self.y0
         self.canvas.moveto(self.id, self.x0, y)
 
         # get_rank用

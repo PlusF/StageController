@@ -5,6 +5,7 @@ class MySerial(serial.Serial):
     # serial.SerialではEOLが\nに設定されており、DS102の規格と異なる
     eol = b'\r'
     leneol = len(eol)
+
     def __init__(self, port, baudrate, **args):
         super().__init__(port, baudrate, **args)
 
@@ -54,9 +55,9 @@ class DS102Controller:
         self.ser = ser
         # 送受信とステータスの確認
         self.ser.send('AXIs1:READY?')
-        print(f'X axis: {"READY" if self.ser.recv() == 1 else "NOT READY"}')
+        print(f'X axis: {"READY" if self.ser.recv() == "1" else "NOT READY"}')
         self.ser.send('AXIs2:READY?')
-        print(f'Y axis: {"READY" if self.ser.recv() == 1 else "NOT READY"}')
+        print(f'Y axis: {"READY" if self.ser.recv() == "1" else "NOT READY"}')
 
     def set_velocity(self, axis: str, vel: int):
         """
@@ -129,8 +130,8 @@ class DS102Controller:
         :type axis: str
         :return:
         """
-        msg = axis2msg(axis) + 'STOP_Emergency'
-        # msg = axis2msg(axis) + 'STOP_Reduction'
+        msg = axis2msg(axis) + 'STOP Emergency'
+        # msg = axis2msg(axis) + 'STOP Reduction'
         self.ser.send(msg)
 
     def stop(self):
@@ -138,21 +139,32 @@ class DS102Controller:
         stop all
         :return:
         """
-        msg = 'STOP_Emergency'
-        # msg = 'STOP_Reduction'
+        msg = 'STOP Emergency'
+        # msg = 'STOP Reduction'
         self.ser.send(msg)
 
     def get_position(self):
         """
         get x and y position
-        the unit is unknown
+        the unit is mm
         :rtype (int, int)
         :return: x position, y position
         """
         msg = axis2msg('x') + 'POSition?'
         self.ser.send(msg)
-        pos_x = int(self.ser.recv())
+        pos_x = int(float(self.ser.recv()) * 1000)
         msg = axis2msg('y') + 'POSition?'
         self.ser.send(msg)
-        pos_y = int(self.ser.recv())
+        pos_y = int(float(self.ser.recv()) * 1000)
         return pos_x, pos_y
+
+    def get_position_request(self):
+        """
+        send a request to get x and y position
+        :rtype (int, int)
+        :return:
+        """
+        msg = axis2msg('x') + 'POSition?'
+        self.ser.send(msg)
+        msg = axis2msg('y') + 'POSition?'
+        self.ser.send(msg)
