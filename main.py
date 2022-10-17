@@ -41,7 +41,7 @@ def get_color_by_float(value: float):
 class Application(tk.Frame):
     def __init__(self, master=None, device_xy: DS102Controller = None, device_z=None, cl: ConfigLoader = None):
         super().__init__(master)
-        self.master.title('Z Stage Controller')
+        self.master.title('Stage Controller')
         self.device_xy = device_xy
         self.device_z = device_z
 
