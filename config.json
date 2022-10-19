@@ -1,6 +1,6 @@
 {
   "mode": "DEBUG",
-  "FPS": 5,
+  "FPS": 3,
   "PORT-xy": 3,
   "PORT-z": 4,
   "BAUDRATE-xy": 38400

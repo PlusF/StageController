@@ -352,7 +352,7 @@ def main():
     cl = ConfigLoader('./config.json')
 
     if cl.mode == 'RELEASE':
-        ser = MySerial(cl.port_xy, cl.baudrate_xy)
+        ser = MySerial(cl.port_xy, cl.baudrate_xy, write_timeout=0)
         device_xy = DS102Controller(ser)
         connection = Connection.open_serial_port(cl.port_z)
         device_z = connection.detect_devices()[0]
