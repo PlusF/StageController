@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import copy
 import threading
@@ -180,10 +181,8 @@ class Application(tk.Frame):
         self.thread.start()
 
     def quit(self):
-        # mainloop内でthreadを作っているので、mainloop内でjoinさせないとバグる
-        self.quit_flag = True
-        self.thread.join()
         self.master.destroy()
+        sys.exit()  # デーモン化してあるスレッドはここで死ぬ
 
     def update(self):
         # 動く or 止まる
@@ -201,6 +200,9 @@ class Application(tk.Frame):
         # 図形から操作された場合を検知
         # XY方向
         if self.rank_xy_pre != self.oval_xy.get_rank() or self.direction_xy_pre != self.oval_xy.get_direction():
+            # バグで方向が転換できないことがあるので、一度止めるようにする
+            if self.direction_xy_pre != self.oval_xy.get_direction():
+                self.stop_xy()
             if self.oval_xy.direction[0] > 0:
                 self.move_right()
             elif self.oval_xy.direction[0] < 0:
@@ -334,7 +336,7 @@ class Application(tk.Frame):
     def update_position(self):
         # 現在位置を更新
         # シリアル通信で受信する必要があるため，mainloopとは別threadで処理する．
-        while not self.quit_flag:
+        while True:
             if self.device_xy is None or self.device_z is None:
                 self.x_cur.set(self.x_cur.get() + 1)
                 self.y_cur.set(self.y_cur.get() + 1)

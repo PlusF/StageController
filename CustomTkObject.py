@@ -62,11 +62,14 @@ class MovableOval(MovableObject):
         r = (dx ** 2 + dy ** 2) ** 0.5
         theta = math.atan2(dy, dx)
         if r > self.thres_list[0]:
-            x = (self.thres_list[0] * math.cos(theta) + self.x0) * 0.99
-            y = (self.thres_list[0] * math.sin(theta) + self.y0) * 0.99
+            x = self.thres_list[0] * math.cos(theta) * 0.95 + self.x0
+            y = self.thres_list[0] * math.sin(theta) * 0.95 + self.y0
         self.canvas.moveto(self.id, x, y)
 
         # get_rank用
+        dx = x - self.x0
+        dy = y - self.y0
+        r = (dx ** 2 + dy ** 2) ** 0.5
         self.disp = r
 
         # directionの確認
@@ -100,12 +103,13 @@ class MovableRect(MovableObject):
         y = event.y - self.h_half
         dy = y - self.y0
         if dy < -self.thres_list[0]:
-            y = -self.thres_list[0] + 1 + self.y0
+            y = -self.thres_list[0] * 0.95 + self.y0
         elif dy > self.thres_list[0]:
-            y = self.thres_list[0] - 1 + self.y0
+            y = self.thres_list[0] * 0.95 + self.y0
         self.canvas.moveto(self.id, self.x0, y)
 
         # get_rank用
+        dy = y - self.y0
         self.disp = abs(dy)
 
         # directionの確認
