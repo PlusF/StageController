@@ -40,11 +40,9 @@ def get_color_by_float(value: float):
 
 
 class Application(tk.Frame):
-    def __init__(self, master=None, device_xy: DS102Controller = None, device_z=None, cl: ConfigLoader = None):
+    def __init__(self, master=None, cl: ConfigLoader = None):
         super().__init__(master)
         self.master.title('Stage Controller')
-        self.device_xy = device_xy
-        self.device_z = device_z
 
         # フォントサイズの調整
         self.style = ttk.Style()
@@ -53,12 +51,15 @@ class Application(tk.Frame):
         self.style.configure('.', font=FONT)
         self.style.configure("stop.TButton", activeforeground='red', foreground='red')
 
-        self.create_widgets()
-
+        self.cl = cl
         if cl is not None:
             self.dt = cl.dt
         else:
             self.dt = DT
+
+        self.open_port()
+
+        self.create_widgets()
 
         self.quit_flag = False
 
@@ -73,6 +74,17 @@ class Application(tk.Frame):
         self.create_thread()
 
         self.update()
+
+    def open_port(self):
+        if self.cl.mode == 'RELEASE':
+            self.ser = MySerial(self.cl.port_xy, self.cl.baudrate_xy, write_timeout=0)
+            self.device_xy = DS102Controller(self.ser)
+            self.connection = Connection.open_serial_port(self.cl.port_z)
+            self.device_z = self.connection.detect_devices()[0]
+        elif self.cl.mode == 'DEBUG':
+            self.ser = self.device_xy = self.connection = self.device_z = None
+        else:
+            raise ValueError('Wrong format in config.json. Mode must be DEBUG or RELEASE.')
 
     def create_widgets(self):
         # 親フレーム
@@ -181,8 +193,14 @@ class Application(tk.Frame):
         self.thread.start()
 
     def quit(self):
-        self.master.destroy()
-        sys.exit()  # デーモン化してあるスレッドはここで死ぬ
+        if messagebox.askyesno('確認', 'ステージが定位置へと移動します。'):
+            # 定位置に戻る & openしているポートをcloseする。
+            if self.cl.mode == 'RELEASE':
+                self.device_z.move_absolute(9000, unit=Units.LENGTH_MICROMETRES)
+                self.ser.close()
+                self.connection.close()
+            self.master.destroy()
+            sys.exit()  # デーモン化してあるスレッドはここで死ぬ
 
     def update(self):
         # 動く or 止まる
@@ -353,27 +371,11 @@ class Application(tk.Frame):
 def main():
     cl = ConfigLoader('./config.json')
 
-    if cl.mode == 'RELEASE':
-        ser = MySerial(cl.port_xy, cl.baudrate_xy, write_timeout=0)
-        device_xy = DS102Controller(ser)
-        connection = Connection.open_serial_port(cl.port_z)
-        device_z = connection.detect_devices()[0]
-    elif cl.mode == 'DEBUG':
-        ser = device_xy = connection = device_z = None
-    else:
-        raise ValueError('Wrong format in config.json. Mode must be DEBUG or RELEASE.')
-
     root = tk.Tk()
     root.option_add("*font", FONT)  # こうしないとコンボボックスのフォントが変わらない
     root.protocol('WM_DELETE_WINDOW', (lambda: 'pass')())  # QUITボタン以外の終了操作を許可しない
-    app = Application(master=root, device_xy=device_xy, device_z=device_z, cl=cl)
+    app = Application(master=root, cl=cl)
     app.mainloop()
-
-    # 定位置に戻る & openしているポートをcloseする。
-    if cl.mode == 'RELEASE':
-        device_z.move_absolute(9000, unit=Units.LENGTH_MICROMETRES)
-        ser.close()
-        connection.close()
 
     print('Successfully finished the controller program.')
 
