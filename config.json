@@ -3,5 +3,7 @@
   "FPS": 3,
   "PORT-xy": 3,
   "PORT-z": 4,
-  "BAUDRATE-xy": 38400
+  "BAUDRATE-xy": 38400,
+  "VELLIST-xy": [0, 1, 10, 100, 1000],
+  "VELLIST-z": [0, 0.5, 1, 10, 100, 1000]
 }

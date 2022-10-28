@@ -26,8 +26,6 @@ SIZE_CONT = 15
 DT = 200
 FONT = ('游ゴシック', 16)
 MAX_Z = 25400.032
-VEL_LIST_XY = (0, 1, 10, 100, 1000)
-VEL_LIST_Z = (0, 0.5, 1, 10, 100, 1000)
 
 
 def get_color_by_float(value: float):
@@ -40,7 +38,7 @@ def get_color_by_float(value: float):
 
 
 class Application(tk.Frame):
-    def __init__(self, master=None, cl: ConfigLoader = None):
+    def __init__(self, master=None, config='./config.json'):
         super().__init__(master)
         self.master.title('Stage Controller')
 
@@ -51,17 +49,15 @@ class Application(tk.Frame):
         self.style.configure('.', font=FONT)
         self.style.configure("stop.TButton", activeforeground='red', foreground='red')
 
-        self.cl = cl
-        if cl is not None:
-            self.dt = cl.dt
+        self.cl = ConfigLoader(config)
+        if self.cl.dt is not None:
+            self.dt = self.cl.dt
         else:
             self.dt = DT
 
         self.open_port()
 
         self.create_widgets()
-
-        self.quit_flag = False
 
         self.unit_pos = Units.LENGTH_MICROMETRES
         self.unit_vel = Units.VELOCITY_MICROMETRES_PER_SECOND
@@ -118,7 +114,7 @@ class Application(tk.Frame):
         self.canvas_xy.pack()
         # ウィジェット xy_buttons
         self.vel_xy = tk.IntVar(value=100)
-        self.combobox_xy = ttk.Combobox(self.frame_xy_buttons, values=VEL_LIST_XY[1:], textvariable=self.vel_xy, justify='center', width=WIDTH_BUTTON)
+        self.combobox_xy = ttk.Combobox(self.frame_xy_buttons, values=self.cl.vel_list_xy[1:], textvariable=self.vel_xy, justify='center', width=WIDTH_BUTTON)
         self.button_top = ttk.Button(self.frame_xy_buttons, width=WIDTH_BUTTON, text='↑')
         self.button_left = ttk.Button(self.frame_xy_buttons, width=WIDTH_BUTTON, text='←')
         self.button_right = ttk.Button(self.frame_xy_buttons, width=WIDTH_BUTTON, text='→')
@@ -161,7 +157,7 @@ class Application(tk.Frame):
         self.canvas_z.pack()
         # ウィジェット z_buttons
         self.vel_z = tk.DoubleVar(value=100)
-        self.combobox_z = ttk.Combobox(self.frame_z_buttons, values=VEL_LIST_Z[1:], textvariable=self.vel_z, justify='center', width=WIDTH_BUTTON)
+        self.combobox_z = ttk.Combobox(self.frame_z_buttons, values=self.cl.vel_list_z[1:], textvariable=self.vel_z, justify='center', width=WIDTH_BUTTON)
         self.button_up = ttk.Button(self.frame_z_buttons, width=WIDTH_BUTTON, text='UP')
         self.button_down = ttk.Button(self.frame_z_buttons, width=WIDTH_BUTTON, text='DOWN')
         self.button_up.bind('<Button-1>', self.move_up)
@@ -246,14 +242,14 @@ class Application(tk.Frame):
     def move_up(self, event=None):
         # event is None: 図形操作から呼ばれた
         if event is None:
-            vel = VEL_LIST_Z[self.rect_z.get_rank()]
+            vel = self.cl.vel_list_z[self.rect_z.get_rank()]
         else:
             vel = self.vel_z.get()
 
         if vel == 0:
             return
 
-        if self.device_z is None:
+        if self.cl.mode == 'DEBUG':
             print(f'move up by {vel} \u03bcm/s')
         else:
             self.device_z.move_velocity(vel, unit=self.unit_vel)
@@ -261,14 +257,14 @@ class Application(tk.Frame):
     def move_down(self, event=None):
         # event is None: 図形操作から呼ばれた
         if event is None:
-            vel = -VEL_LIST_Z[self.rect_z.get_rank()]
+            vel = -self.cl.vel_list_z[self.rect_z.get_rank()]
         else:
             vel = -self.vel_z.get()
 
         if vel == 0:
             return
 
-        if self.device_z is None:
+        if self.cl.mode == 'DEBUG':
             print(f'move down by {vel} \u03bcm/s')
         else:
             self.device_z.move_velocity(vel, unit=self.unit_vel)
@@ -276,14 +272,14 @@ class Application(tk.Frame):
     def move_right(self, event=None):
         # event is None: 図形操作から呼ばれた
         if event is None:
-            vel = VEL_LIST_XY[self.oval_xy.get_rank()]
+            vel = self.cl.vel_list_xy[self.oval_xy.get_rank()]
         else:
             vel = self.vel_xy.get()
 
         if vel == 0:
             return
 
-        if self.device_xy is None:
+        if self.cl.mode == 'DEBUG':
             print(f'move right by {vel} \u03bcm/s')
         else:
             self.device_xy.move_velocity('x', vel)
@@ -291,14 +287,14 @@ class Application(tk.Frame):
     def move_left(self, event=None):
         # event is None: 図形操作から呼ばれた
         if event is None:
-            vel = -VEL_LIST_XY[self.oval_xy.get_rank()]
+            vel = -self.cl.vel_list_xy[self.oval_xy.get_rank()]
         else:
             vel = -self.vel_xy.get()
 
         if vel == 0:
             return
 
-        if self.device_xy is None:
+        if self.cl.mode == 'DEBUG':
             print(f'move left by {vel} \u03bcm/s')
         else:
             self.device_xy.move_velocity('x', vel)
@@ -306,14 +302,14 @@ class Application(tk.Frame):
     def move_top(self, event=None):
         # event is None: 図形操作から呼ばれた
         if event is None:
-            vel = VEL_LIST_XY[self.oval_xy.get_rank()]
+            vel = self.cl.vel_list_xy[self.oval_xy.get_rank()]
         else:
             vel = self.vel_xy.get()
 
         if vel == 0:
             return
 
-        if self.device_xy is None:
+        if self.cl.mode == 'DEBUG':
             print(f'move top by {vel} \u03bcm/s')
         else:
             self.device_xy.move_velocity('y', vel)
@@ -321,28 +317,28 @@ class Application(tk.Frame):
     def move_bottom(self, event=None):
         # event is None: 図形操作から呼ばれた
         if event is None:
-            vel = -VEL_LIST_XY[self.oval_xy.get_rank()]
+            vel = -self.cl.vel_list_xy[self.oval_xy.get_rank()]
         else:
             vel = -self.vel_xy.get()
 
         if vel == 0:
             return
 
-        if self.device_xy is None:
+        if self.cl.mode == 'DEBUG':
             print(f'move bottom by {vel} \u03bcm/s')
         else:
             self.device_xy.move_velocity('y', vel)
 
     def stop_xy(self, event=None):
         # xy方向に停止命令を出す
-        if self.device_xy is None:
+        if self.cl.mode == 'DEBUG':
             print('stop xy')
         else:
             self.device_xy.stop()
 
     def stop_z(self, event=None):
         # z方向に停止命令を出す
-        if self.device_z is None:
+        if self.cl.mode == 'DEBUG':
             print('stop z')
         else:
             self.device_z.stop()
@@ -355,7 +351,7 @@ class Application(tk.Frame):
         # 現在位置を更新
         # シリアル通信で受信する必要があるため，mainloopとは別threadで処理する．
         while True:
-            if self.device_xy is None or self.device_z is None:
+            if self.cl.mode == 'DEBUG':
                 self.x_cur.set(self.x_cur.get() + 1)
                 self.y_cur.set(self.y_cur.get() + 1)
                 self.z_cur.set(self.z_cur.get() + 1)
@@ -369,12 +365,10 @@ class Application(tk.Frame):
 
 
 def main():
-    cl = ConfigLoader('./config.json')
-
     root = tk.Tk()
     root.option_add("*font", FONT)  # こうしないとコンボボックスのフォントが変わらない
     root.protocol('WM_DELETE_WINDOW', (lambda: 'pass')())  # QUITボタン以外の終了操作を許可しない
-    app = Application(master=root, cl=cl)
+    app = Application(master=root, config='./config.json')
     app.mainloop()
 
     print('Successfully finished the controller program.')

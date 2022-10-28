@@ -10,6 +10,8 @@ class ConfigLoader:
         self.port_xy = f'COM{config["PORT-xy"]}'
         self.port_z = f'COM{config["PORT-z"]}'
         self.baudrate_xy = config["BAUDRATE-xy"]
+        self.vel_list_xy = config["VELLIST-xy"]
+        self.vel_list_z = config["VELLIST-z"]
 
 
 def main():
