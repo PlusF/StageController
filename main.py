@@ -10,7 +10,7 @@ from zaber_motion import Library
 from zaber_motion import LogOutputMode
 from zaber_motion.binary import Connection
 from zaber_motion import Units  # 実世界の単位に変換するため
-from DS102Controller import MySerial, DS102Controller
+from ds102controller import MySerial, DS102Controller
 from CustomTkObject import MovableOval, MovableRect
 from ConfigLoader import ConfigLoader
 

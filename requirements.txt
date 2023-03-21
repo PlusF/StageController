@@ -1,0 +1,3 @@
+zaber-motion
+pyserial
+git+https://github.com/PlusF/DS102Controller
